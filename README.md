@@ -14,10 +14,9 @@ PowerCo is a major gas and electricity utility company. The hypothesis is that *
 │   ├── feature_engineering.ipynb  # Feature Engineering
 │   └── modeling.ipynb             # Predictive Modeling
 │
-├── data/
-│   └── README.md                  # Data source and description
-│
-└── outputs/
+└── data/
+    └── README.md                  # Data source and description
+
 ```
 
 ## Notebooks
