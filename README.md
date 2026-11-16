@@ -153,19 +153,13 @@ Run the notebooks in the following order from the `notebooks/` directory:
 2. `feature_engineering.ipynb` — create model features and export `my_data_for_prediction.csv`.
 3. `modeling.ipynb` — train, tune, and evaluate the churn models.
 
-Required Python packages include:
+Install the core dependencies with:
 
-- Python 3
-- pandas
-- numpy
-- matplotlib
-- seaborn
-- scikit-learn
-- xgboost
-- joblib
-- Jupyter Notebook
+```bash
+pip install -r requirements.txt
+```
 
-SHAP is optional for explainability plots.
+SHAP is optional for explainability plots. Install it separately with `pip install shap` if needed.
 
 ## Repository Structure
 
@@ -186,6 +180,7 @@ SHAP is optional for explainability plots.
 │   ├── xgboost_best.joblib
 │   ├── model_metadata.json
 │   └── feature_importance_comparison.csv
+├── requirements.txt
 ├── outputs/
 └── README.md
 ```
@@ -193,7 +188,7 @@ SHAP is optional for explainability plots.
 ## Limitations and Next Steps
 
 - The analysis is observational and does not prove that price changes cause churn.
-- The notebooks do not yet persist a trained model or expose a production inference pipeline.
+- Running `modeling.ipynb` persists the trained models and metadata, but the repository does not yet expose a production inference pipeline.
 - The current evaluation is based on a single train/validation/test split; repeated cross-validation and time-based validation would provide a stronger estimate of generalization.
 - Future work should include model explainability with SHAP, campaign-level cost optimization, probability calibration, and an A/B test of retention interventions.
 
