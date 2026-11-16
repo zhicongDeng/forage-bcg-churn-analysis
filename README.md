@@ -86,6 +86,19 @@ The feature engineering pipeline creates customer-level model inputs from the ra
 
 The evaluation uses stratified train/validation/test splits. The classification threshold is selected using the validation set rather than relying only on the default 0.5 threshold. F2-based tuning gives more weight to recall than precision.
 
+## Feature Importance and Explainability
+
+The modeling notebook compares four views of feature importance:
+
+- Built-in tree importance from the balanced Random Forest.
+- Built-in tree importance from XGBoost.
+- Test-set permutation importance for both models, measured by the decrease in average precision.
+- Optional SHAP summary plots for global and model-specific explanations.
+
+Features that rank highly across both models are treated as more stable candidates for business interpretation. The analysis also aggregates importance by business group, including contract and tenure, acquisition channel and origin, consumption and forecast, customer economics, and price dynamics.
+
+The interpretation is deliberately conservative: feature importance shows predictive association, not causality. A high-ranking price feature can support a price-protection campaign hypothesis, but it should be validated with controlled customer experiments.
+
 ## Conclusions
 
 1. Churn prediction should be treated as a recall-oriented classification problem rather than an accuracy-maximization problem.
@@ -125,6 +138,10 @@ After deployment, track recall, precision, PR-AUC, the number of high-risk custo
 | `data/price_data.csv` | Monthly price records for each customer |
 | `data/clean_data_after_eda.csv` | Customer data merged with annual and six-month price variance features |
 | `data/my_data_for_prediction.csv` | Final engineered feature table used by the modeling notebook |
+| `artifacts/random_forest_balanced.joblib` | Persisted balanced Random Forest model |
+| `artifacts/xgboost_best.joblib` | Persisted best XGBoost model |
+| `artifacts/model_metadata.json` | Feature schema, thresholds, split settings, and model parameters |
+| `artifacts/feature_importance_comparison.csv` | Cross-model feature importance comparison |
 
 The generated CSV files are ignored by Git because the source datasets are provided externally through the BCG virtual experience. Download the source data and place it in `data/` before running the notebooks.
 
@@ -145,7 +162,10 @@ Required Python packages include:
 - seaborn
 - scikit-learn
 - xgboost
+- joblib
 - Jupyter Notebook
+
+SHAP is optional for explainability plots.
 
 ## Repository Structure
 
@@ -161,6 +181,11 @@ Required Python packages include:
 │   ├── eda.ipynb
 │   ├── feature_engineering.ipynb
 │   └── modeling.ipynb
+├── artifacts/
+│   ├── random_forest_balanced.joblib
+│   ├── xgboost_best.joblib
+│   ├── model_metadata.json
+│   └── feature_importance_comparison.csv
 ├── outputs/
 └── README.md
 ```
