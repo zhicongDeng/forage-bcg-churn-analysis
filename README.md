@@ -1,6 +1,6 @@
 # BCG Data Science - Customer Churn Analysis
 
-Customer churn prediction for a power utility company (PowerCo), completed as part of the [BCG Data Science & Analytics Virtual Experience Program](https://www.theforage.com/simulations/bcg/data-science-ccdz) on Forage.
+Customer churn prediction for a power utility company, completed as part of the [BCG Data Science & Analytics Virtual Experience Program](https://www.theforage.com/simulations/bcg/data-science-ccdz) on Forage.
 
 ## Background
 
@@ -32,7 +32,6 @@ PowerCo is a major gas and electricity utility company. The hypothesis is that *
 ### 2. Feature Engineering (`feature_engineering.ipynb`)
 - One-hot encoding of categorical variables (`channel_sales`, `origin_up`)
 - Date features converted to months relative to reference date
-- Log transformation of skewed consumption/forecast features
 - Price change count features (how many times each price type changed over the year)
 - Dec-Jan off-peak price difference features
 - Correlation-based feature selection (drop features with correlation > 0.9)
