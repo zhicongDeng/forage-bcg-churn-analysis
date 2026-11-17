@@ -99,6 +99,8 @@ The strongest shared feature is `margin_gross_pow_ele`, which means the gross ma
 
 The two models reveal different importance structures. XGBoost spreads contribution across a broad feature set, with importance declining rapidly after the leading features. This indicates a composite churn signal involving margin, consumption, contract timing, subscribed power, and price dynamics. Random Forest is more concentrated: `margin_gross_pow_ele` is far ahead of the next feature, while roughly half of the features have limited contribution. The clearer hierarchy makes Random Forest the preferred primary model for a focused retention campaign; XGBoost remains a useful challenger model because it delivers higher recall.
 
+The SHAP results confirm this structure. Random Forest is led by `margin_gross_pow_ele`, `cons_12m`, `month_activ`, `forecast_meter_rent_12m`, and `net_margin`. XGBoost is led by `margin_gross_pow_ele`, `pow_max`, `net_margin`, `month_to_end`, and `var_year_price_off_peak_var`. Together, these results identify subscription margin, customer scale, contract timing, and price variability as the core dimensions of churn risk.
+
 ## Conclusions
 
 1. Churn prediction should be treated as a recall-oriented classification problem rather than an accuracy-maximization problem.

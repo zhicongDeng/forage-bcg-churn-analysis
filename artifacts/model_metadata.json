@@ -85,7 +85,7 @@
       "base_score": null,
       "booster": null,
       "callbacks": [
-        "<xgboost.callback.EarlyStopping object at 0x000001B0DFDFB4D0>"
+        "<xgboost.callback.EarlyStopping object at 0x000001F06F4F2BA0>"
       ],
       "colsample_bylevel": null,
       "colsample_bynode": null,
