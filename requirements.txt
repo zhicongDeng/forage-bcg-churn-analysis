@@ -12,5 +12,5 @@ joblib
 # Notebook environment
 jupyter
 
-# Optional model explainability
-# shap
+# Model explainability
+shap

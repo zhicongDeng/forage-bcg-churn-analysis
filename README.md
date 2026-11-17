@@ -93,19 +93,19 @@ The modeling notebook compares four views of feature importance:
 - Built-in tree importance from the balanced Random Forest.
 - Built-in tree importance from XGBoost.
 - Test-set permutation importance for both models, measured by the decrease in average precision.
-- Optional SHAP summary plots for global and model-specific explanations.
+- SHAP summary plots for the positive class (`churn = 1`), with binary-class output dimensions handled explicitly for both models.
 
-Features that rank highly across both models are treated as more stable candidates for business interpretation. The analysis also aggregates importance by business group, including contract and tenure, acquisition channel and origin, consumption and forecast, customer economics, and price dynamics.
+The strongest shared feature is `margin_gross_pow_ele`, which means the gross margin earned on the customer's power subscription. It ranks first by permutation importance in both models: approximately 0.152 for Random Forest and 0.165 for XGBoost. It also ranks first in Random Forest's intrinsic importance and sixth in XGBoost's intrinsic importance.
 
-The interpretation is deliberately conservative: feature importance shows predictive association, not causality. A high-ranking price feature can support a price-protection campaign hypothesis, but it should be validated with controlled customer experiments.
+The two models reveal different importance structures. XGBoost spreads contribution across a broad feature set, with importance declining rapidly after the leading features. This indicates a composite churn signal involving margin, consumption, contract timing, subscribed power, and price dynamics. Random Forest is more concentrated: `margin_gross_pow_ele` is far ahead of the next feature, while roughly half of the features have limited contribution. The clearer hierarchy makes Random Forest the preferred primary model for a focused retention campaign; XGBoost remains a useful challenger model because it delivers higher recall.
 
 ## Conclusions
 
 1. Churn prediction should be treated as a recall-oriented classification problem rather than an accuracy-maximization problem.
 2. A default model is not sufficient for this use case because it favors the majority retention class.
-3. Tenure, customer characteristics, sales channel, contract economics, and customer-level price dynamics should be considered together.
-4. Price features are useful inputs, but the current analysis cannot claim that price changes are the sole or causal driver of churn.
-5. Threshold selection should reflect the cost of retention outreach and the value of preventing churn.
+3. The commercial economics of the power subscription, represented most clearly by `margin_gross_pow_ele`, is the strongest shared predictive signal.
+4. XGBoost captures a broad composite signal, while Random Forest provides a more focused and communicable feature hierarchy.
+5. For this project, Random Forest is the preferred campaign model because its clearer feature separation supports targeted A/B testing and retention design.
 
 ## Actionable Retention Insights
 
@@ -142,6 +142,7 @@ After deployment, track recall, precision, PR-AUC, the number of high-risk custo
 | `artifacts/xgboost_best.joblib` | Persisted best XGBoost model |
 | `artifacts/model_metadata.json` | Feature schema, thresholds, split settings, and model parameters |
 | `artifacts/feature_importance_comparison.csv` | Cross-model feature importance comparison |
+| `artifacts/shap_importance_comparison.csv` | Cross-model mean absolute SHAP importance |
 
 The generated CSV files are ignored by Git because the source datasets are provided externally through the BCG virtual experience. Download the source data and place it in `data/` before running the notebooks.
 
@@ -159,7 +160,7 @@ Install the core dependencies with:
 pip install -r requirements.txt
 ```
 
-SHAP is optional for explainability plots. Install it separately with `pip install shap` if needed.
+SHAP is included for the model explainability section.
 
 ## Repository Structure
 
@@ -179,7 +180,8 @@ SHAP is optional for explainability plots. Install it separately with `pip insta
 │   ├── random_forest_balanced.joblib
 │   ├── xgboost_best.joblib
 │   ├── model_metadata.json
-│   └── feature_importance_comparison.csv
+│   ├── feature_importance_comparison.csv
+│   └── shap_importance_comparison.csv
 ├── requirements.txt
 ├── outputs/
 └── README.md
