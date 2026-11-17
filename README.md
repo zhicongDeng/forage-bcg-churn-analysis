@@ -1,201 +1,126 @@
 # Customer Churn Prediction for a Utility Company
 
-Customer churn analysis and prediction project completed as part of the [BCG Data Science & Analytics Virtual Experience Program](https://www.theforage.com/simulations/bcg/data-science-ccdz).
+Customer churn analysis completed for the [BCG Data Science & Analytics Virtual Experience Program](https://www.theforage.com/simulations/bcg/data-science-ccdz). The project combines customer behavior, contract attributes, and electricity price dynamics to identify churn risk and translate model output into retention actions.
 
-The project combines customer behavior, contract attributes, and electricity price dynamics to identify customers at risk of churn and translate model results into retention actions.
+## Key takeaways
 
-## Business Objective
+- Churn is a minority-class problem: 1,419 of 14,606 customers churned (9.7%), so accuracy alone is not an appropriate success metric.
+- After class balancing and threshold tuning, the Random Forest reached 66.2% recall and 24.7% precision; XGBoost reached 71.5% recall and 14.6% precision.
+- `margin_gross_pow_ele` is the strongest shared signal. It represents the gross margin earned on a customer's power subscription and ranks first by permutation importance for both models.
+- XGBoost uses a broad, composite feature signal. Random Forest has a sharper hierarchy, making it easier to explain and translate into a focused retention campaign.
+- The recommended campaign model is Random Forest, with XGBoost retained as a higher-recall challenger.
 
-PowerCo wants to understand why customers leave and identify customers who may churn soon. The analysis focuses on four questions:
+## Business question
 
-1. Is price sensitivity associated with customer churn?
-2. Which customer, contract, channel, and price features are most useful for identifying churn risk?
-3. How should the model threshold be selected when missing a potential churner is more costly than contacting an additional retained customer?
-4. How can churn predictions support targeted retention campaigns?
+Which customers are most likely to churn, which features explain that risk, and how can the business target retention actions when missing a potential churner is more costly than contacting an additional retained customer?
 
-## Key Results
-
-- The dataset contains 14,606 customers, of whom 1,419 churned. The churn rate is approximately 9.7%, creating a substantial class-imbalance problem.
-- A default Random Forest achieved 90.8% accuracy but only 6.5% recall for churned customers, showing why accuracy alone is misleading for this problem.
-- After class balancing and threshold tuning, the Random Forest achieved 66.2% recall and 24.7% precision.
-- The tuned XGBoost model achieved 71.5% recall and 14.6% precision, identifying more potential churners at the cost of more false positives.
-- The final modeling decision prioritizes recall because failing to identify a customer who is about to churn may be more costly than offering an intervention to a customer who would have stayed.
-
-## Analytical Framework
+## Analytical approach
 
 ```text
 Raw customer and price data
-            |
-            v
-Exploratory data analysis
-            |
-            v
-Customer-level price aggregation
-            |
-            v
-Categorical and date feature engineering
-            |
-            v
-Correlation-based feature selection
-            |
-            v
-Random Forest and XGBoost modeling
-            |
-            v
-Precision-recall threshold tuning
-            |
-            v
-Retention recommendations
+        -> exploratory analysis
+        -> customer-level price aggregation
+        -> date and categorical feature engineering
+        -> correlation-based feature selection
+        -> Random Forest and XGBoost
+        -> validation-based threshold tuning
+        -> feature importance and SHAP analysis
+        -> retention recommendations
 ```
 
-## Observations
+The workflow uses stratified train/validation/test splits. Thresholds are selected on the validation set, with F2-based tuning to give more weight to recall. The final test set is reserved for evaluation.
 
-### Customer and behavioral patterns
+## Main observations
 
-- Churn is a minority-class outcome, so a model can achieve high accuracy while missing most churners.
-- Consumption, forecast consumption, and margin variables are strongly right-skewed and contain long tails.
-- Customers with shorter tenure show a higher tendency to churn.
-- Churn rates vary across sales channels and customer origins, suggesting that acquisition and onboarding experience may matter.
-- Gas subscription shows limited visible separation between churned and retained customers in the exploratory analysis.
+- Consumption, forecast consumption, and margin variables are right-skewed and contain long tails.
+- Shorter-tenure customers show higher churn tendency.
+- Churn varies across sales channels and customer origins, indicating potential onboarding or acquisition effects.
+- Customer-level price dynamics are more informative than the overall market price trend through price variance, December-to-January differences, and price-change counts.
+- The analysis supports price sensitivity as a useful predictive hypothesis; it does not establish that price changes cause churn.
 
-### Price-related patterns
+## Feature engineering
 
-- Monthly average electricity prices change relatively gradually at the overall-market level.
-- Customer-level price dynamics may still provide useful signal through annual and six-month price variance, December-to-January price differences, and the number of price changes experienced during the year.
-- The analysis supports price sensitivity as a useful modeling hypothesis, but it does not establish a causal relationship between price changes and churn.
+- Aggregate annual and recent six-month price variance for six price types.
+- Calculate December-to-January off-peak energy and power price differences.
+- Count price changes during the observation period.
+- Group low-frequency channel and origin categories into `OTHER` before one-hot encoding.
+- Convert `has_gas` to a binary feature and contract dates to month-based features relative to `2016-01-01`.
+- Remove highly correlated numeric features using a correlation threshold above 0.9.
 
-## Feature Engineering
+## Model comparison
 
-The feature engineering pipeline creates customer-level model inputs from the raw tables:
-
-- Aggregates annual and recent six-month variance for six price types.
-- Calculates December-to-January off-peak energy and power price differences.
-- Counts how many times each price type changed during the observation period.
-- Groups low-frequency sales-channel and customer-origin categories into `OTHER` before one-hot encoding.
-- Converts `has_gas` into a binary feature.
-- Converts contract dates into month-based features relative to `2016-01-01`.
-- Removes highly correlated numeric features using a correlation threshold above 0.9.
-
-## Model Comparison
-
-| Model | Accuracy | Precision | Recall | Interpretation |
+| Model | Accuracy | Precision | Recall | Role |
 |---|---:|---:|---:|---|
-| Random Forest baseline | 0.908 | 0.852 | 0.065 | Strong overall accuracy, but misses most churners |
-| Balanced Random Forest with threshold tuning | 0.771 | 0.247 | 0.662 | Better suited to identifying at-risk customers |
-| XGBoost with F2 threshold tuning | 0.565 | 0.146 | 0.715 | Highest recall, but creates more false positives |
+| Random Forest baseline | 0.908 | 0.852 | 0.065 | Reference only; misses most churners |
+| Balanced Random Forest + threshold tuning | 0.771 | 0.247 | 0.662 | Preferred campaign model |
+| XGBoost + F2 threshold tuning | 0.565 | 0.146 | 0.715 | Higher-recall challenger |
 
-The evaluation uses stratified train/validation/test splits. The classification threshold is selected using the validation set rather than relying only on the default 0.5 threshold. F2-based tuning gives more weight to recall than precision.
+## Explainability and research conclusion
 
-## Feature Importance and Explainability
+The modeling notebook compares built-in tree importance, test-set permutation importance, and positive-class SHAP values for both models.
 
-The modeling notebook compares four views of feature importance:
+### Shared signal
 
-- Built-in tree importance from the balanced Random Forest.
-- Built-in tree importance from XGBoost.
-- Test-set permutation importance for both models, measured by the decrease in average precision.
-- SHAP summary plots for the positive class (`churn = 1`), with binary-class output dimensions handled explicitly for both models.
+`margin_gross_pow_ele` ranks first by permutation importance for both Random Forest (approximately 0.152) and XGBoost (approximately 0.165). The two methods therefore agree that power-subscription margin and related price economics deserve the main commercial focus.
 
-The strongest shared feature is `margin_gross_pow_ele`, which means the gross margin earned on the customer's power subscription. It ranks first by permutation importance in both models: approximately 0.152 for Random Forest and 0.165 for XGBoost. It also ranks first in Random Forest's intrinsic importance and sixth in XGBoost's intrinsic importance.
+### Different model structures
 
-The two models reveal different importance structures. XGBoost spreads contribution across a broad feature set, with importance declining rapidly after the leading features. This indicates a composite churn signal involving margin, consumption, contract timing, subscribed power, and price dynamics. Random Forest is more concentrated: `margin_gross_pow_ele` is far ahead of the next feature, while roughly half of the features have limited contribution. The clearer hierarchy makes Random Forest the preferred primary model for a focused retention campaign; XGBoost remains a useful challenger model because it delivers higher recall.
+- XGBoost shows an approximately exponential decline after ranking: many features contribute to a composite churn signal spanning margin, consumption, contract timing, subscribed power, and price dynamics.
+- Random Forest is more concentrated: `margin_gross_pow_ele` is far ahead of the next feature, `cons_12m`, while roughly half of the features have limited or negative permutation contribution.
+- The Random Forest hierarchy is easier to communicate and supports a narrower intervention design. XGBoost remains useful when higher recall and broader feature interactions are valuable.
 
-The SHAP results confirm this structure. Random Forest is led by `margin_gross_pow_ele`, `cons_12m`, `month_activ`, `forecast_meter_rent_12m`, and `net_margin`. XGBoost is led by `margin_gross_pow_ele`, `pow_max`, `net_margin`, `month_to_end`, and `var_year_price_off_peak_var`. Together, these results identify subscription margin, customer scale, contract timing, and price variability as the core dimensions of churn risk.
+The SHAP ranking supports the same conclusion. Random Forest is led by `margin_gross_pow_ele`, `cons_12m`, `month_activ`, `forecast_meter_rent_12m`, and `net_margin`. XGBoost is led by `margin_gross_pow_ele`, `pow_max`, `net_margin`, `month_to_end`, and `var_year_price_off_peak_var`. SHAP magnitudes should be compared within each model because the models use different output scales.
 
-## Conclusions
+## Actionable recommendations
 
-1. Churn prediction should be treated as a recall-oriented classification problem rather than an accuracy-maximization problem.
-2. A default model is not sufficient for this use case because it favors the majority retention class.
-3. The commercial economics of the power subscription, represented most clearly by `margin_gross_pow_ele`, is the strongest shared predictive signal.
-4. XGBoost captures a broad composite signal, while Random Forest provides a more focused and communicable feature hierarchy.
-5. For this project, Random Forest is the preferred campaign model because its clearer feature separation supports targeted A/B testing and retention design.
+1. Run an A/B test for customers with high predicted churn and high `margin_gross_pow_ele`, comparing targeted price protection or tariff review with standard communication.
+2. Match offers to consumption and subscribed power; use `cons_12m` and `pow_max` to distinguish customer needs.
+3. Contact customers proactively around `month_to_end`, `month_activ`, and `month_renew`, especially for newer or renewal-stage customers.
+4. Use SHAP and permutation importance to define a reduced-feature challenger. Select features with training and validation data only, retrain the model, and evaluate it once on the untouched test set. Keep the reduced model if it preserves predictive performance while improving interpretability, campaign cost, or operational efficiency.
+5. Judge campaign success by churn reduction, retained margin, offer cost, and incremental profit, not recall alone.
 
-## Actionable Retention Insights
+## Reproducibility
 
-### 1. Build a prioritized churn-risk list
+Run the notebooks from `notebooks/` in this order:
 
-Use the model probability to identify high-risk customers, then rank them by both churn probability and customer value:
+1. `eda.ipynb` creates `clean_data_after_eda.csv`.
+2. `feature_engineering.ipynb` creates `my_data_for_prediction.csv`.
+3. `modeling.ipynb` trains, evaluates, explains, and persists the models.
 
-```text
-Retention priority = churn probability × customer value
-```
-
-This helps focus expensive interventions on customers where preventing churn has the greatest expected value.
-
-### 2. Use differentiated interventions
-
-- Offer targeted discounts or temporary price protection to customers showing price-related risk signals.
-- Provide onboarding and bill-explanation support to newer customers.
-- Assign proactive service outreach to high-value, high-risk customers.
-- Use low-cost automated communication for lower-value customers with elevated predicted risk.
-
-### 3. Monitor business outcomes, not only model metrics
-
-After deployment, track recall, precision, PR-AUC, the number of high-risk customers, intervention conversion rate, campaign cost, and estimated revenue retained. A controlled campaign test should be used to measure whether the interventions actually reduce churn.
-
-## Data and Outputs
-
-| File | Description |
-|---|---|
-| `data/client_data.csv` | Customer attributes, consumption, forecasts, contract information, and churn label |
-| `data/price_data.csv` | Monthly price records for each customer |
-| `data/clean_data_after_eda.csv` | Customer data merged with annual and six-month price variance features |
-| `data/my_data_for_prediction.csv` | Final engineered feature table used by the modeling notebook |
-| `artifacts/random_forest_balanced.joblib` | Persisted balanced Random Forest model |
-| `artifacts/xgboost_best.joblib` | Persisted best XGBoost model |
-| `artifacts/model_metadata.json` | Feature schema, thresholds, split settings, and model parameters |
-| `artifacts/feature_importance_comparison.csv` | Cross-model feature importance comparison |
-| `artifacts/shap_importance_comparison.csv` | Cross-model mean absolute SHAP importance |
-
-The generated CSV files are ignored by Git because the source datasets are provided externally through the BCG virtual experience. Download the source data and place it in `data/` before running the notebooks.
-
-## How to Run
-
-Run the notebooks in the following order from the `notebooks/` directory:
-
-1. `eda.ipynb` — load raw data, perform exploratory analysis, and create `clean_data_after_eda.csv`.
-2. `feature_engineering.ipynb` — create model features and export `my_data_for_prediction.csv`.
-3. `modeling.ipynb` — train, tune, and evaluate the churn models.
-
-Install the core dependencies with:
+Install dependencies with:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-SHAP is included for the model explainability section.
+The trained models and metadata are saved under `artifacts/`:
 
-## Repository Structure
+- `random_forest_balanced.joblib`
+- `xgboost_best.joblib`
+- `model_metadata.json`
+- `feature_importance_comparison.csv`
+- `shap_importance_comparison.csv`
+
+Source data is not included. Place `client_data.csv` and `price_data.csv` under `data/` before running the notebooks.
+
+## Repository structure
 
 ```text
 .
-├── data/
-│   ├── README.md
-│   ├── client_data.csv                 # downloaded source data
-│   ├── price_data.csv                  # downloaded source data
-│   ├── clean_data_after_eda.csv        # generated intermediate data
-│   └── my_data_for_prediction.csv      # generated modeling data
-├── notebooks/
-│   ├── eda.ipynb
-│   ├── feature_engineering.ipynb
-│   └── modeling.ipynb
-├── artifacts/
-│   ├── random_forest_balanced.joblib
-│   ├── xgboost_best.joblib
-│   ├── model_metadata.json
-│   ├── feature_importance_comparison.csv
-│   └── shap_importance_comparison.csv
-├── requirements.txt
-├── outputs/
-└── README.md
+|-- data/                 # source and generated data files
+|-- notebooks/            # EDA, feature engineering, and modeling
+|-- artifacts/            # persisted models, metadata, and explainability tables
+|-- requirements.txt
+`-- README.md
 ```
 
-## Limitations and Next Steps
+## Limitations and next steps
 
 - The analysis is observational and does not prove that price changes cause churn.
-- Running `modeling.ipynb` persists the trained models and metadata, but the repository does not yet expose a production inference pipeline.
-- The current evaluation is based on a single train/validation/test split; repeated cross-validation and time-based validation would provide a stronger estimate of generalization.
-- Future work should include model explainability with SHAP, campaign-level cost optimization, probability calibration, and an A/B test of retention interventions.
+- Evaluation uses one stratified split; repeated cross-validation and time-based validation would strengthen the generalization estimate.
+- The repository persists trained models but does not yet provide a production inference service.
+- The reduced-feature challenger and controlled retention experiment are the next steps for testing whether model explanations improve campaign efficiency.
 
 ## Technologies
 
-Python · Jupyter Notebook · pandas · NumPy · seaborn · Matplotlib · scikit-learn · XGBoost
+Python, Jupyter, pandas, NumPy, seaborn, Matplotlib, scikit-learn, XGBoost, SHAP, and joblib.
