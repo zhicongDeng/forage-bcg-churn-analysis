@@ -12,6 +12,8 @@ Explore how customer characteristics, contract terms and electricity prices rela
 Use these findings to understand potential reasons for leaving, identify at-risk customers and
 inform retention strategies.
 
+The initial hypothesis is that electricity prices and price changes contribute to customer churn.
+
 ## Dataset
 
 The data were provided as part of the
@@ -112,6 +114,11 @@ Both balanced RF variants have identical ROC-AUC because they use the same proba
 Changing their classification threshold changes precision and recall, not the probability ranking.
 
 ## Model interpretation
+
+**Price hypothesis: partially supported.** Price-variation features contribute to churn predictions,
+while subscription margin is the strongest shared signal. This points to pricing-related customer
+economics as a potential reason for churn, with stronger evidence for margin than for price changes
+alone.
 
 Subscription power margin, `margin_gross_pow_ele`, ranks first in permutation importance for both
 models. Consumption, contract timing and subscribed power also contribute.
