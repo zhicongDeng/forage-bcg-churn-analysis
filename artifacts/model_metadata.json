@@ -54,8 +54,8 @@
     "stratified": true
   },
   "thresholds": {
-    "random_forest_recall_target": 0.08,
-    "random_forest_f2": 0.12,
+    "random_forest_recall_target": 0.19,
+    "random_forest_f2": 0.22,
     "xgboost_f2": 0.15923534333705902
   },
   "models": {
@@ -85,7 +85,7 @@
       "base_score": null,
       "booster": null,
       "callbacks": [
-        "<xgboost.callback.EarlyStopping object at 0x000001F06F4F2BA0>"
+        "<xgboost.callback.EarlyStopping object at 0x00000222DE721130>"
       ],
       "colsample_bylevel": null,
       "colsample_bynode": null,

@@ -1,126 +1,178 @@
 # Customer Churn Prediction for a Utility Company
 
-Customer churn analysis completed for the [BCG Data Science & Analytics Virtual Experience Program](https://www.theforage.com/simulations/bcg/data-science-ccdz). The project combines customer behavior, contract attributes, and electricity price dynamics to identify churn risk and translate model output into retention actions.
+Investigate potential reasons for customer churn and identify opportunities to improve retention.
 
-## Key takeaways
+The saved evaluation covers 1,461 test customers, including 142 churners. XGBoost achieves ROC-AUC
+**0.7005** and F2 **0.4151**, making it the preferred model for this project based on the
+current test results.
 
-- Churn is a minority-class problem: 1,419 of 14,606 customers churned (9.7%), so accuracy alone is not an appropriate success metric.
-- After class balancing and threshold tuning, the Random Forest reached 66.2% recall and 24.7% precision; XGBoost reached 71.5% recall and 14.6% precision.
-- `margin_gross_pow_ele` is the strongest shared signal. It represents the gross margin earned on a customer's power subscription and ranks first by permutation importance for both models.
-- XGBoost uses a broad, composite feature signal. Random Forest has a sharper hierarchy, making it easier to explain and translate into a focused retention campaign.
-- The recommended campaign model is Random Forest, with XGBoost retained as a higher-recall challenger.
+## Purpose
 
-## Business question
+Explore how customer characteristics, contract terms and electricity prices relate to churn.
+Use these findings to understand potential reasons for leaving, identify at-risk customers and
+inform retention strategies.
 
-Which customers are most likely to churn, which features explain that risk, and how can the business target retention actions when missing a potential churner is more costly than contacting an additional retained customer?
+## Dataset
 
-## Analytical approach
+The data were provided as part of the
+[BCG Data Science & Analytics Virtual Experience Program on Forage](https://www.theforage.com/simulations/bcg/data-science-ccdz).
+The source files are `client_data.csv` (customer attributes and churn labels) and
+`price_data.csv` (customer electricity price history).
 
-```text
-Raw customer and price data
-        -> exploratory analysis
-        -> customer-level price aggregation
-        -> date and categorical feature engineering
-        -> correlation-based feature selection
-        -> Random Forest and XGBoost
-        -> validation-based threshold tuning
-        -> feature importance and SHAP analysis
-        -> retention recommendations
-```
+The supplied data contain 14,606 customer records and 193,002 price records. Each modelling row
+represents one customer, with churn as the binary target. Around 9.7% of customers churned.
 
-The workflow uses stratified train/validation/test splits. Thresholds are selected on the validation set, with F2-based tuning to give more weight to recall. The final test set is reserved for evaluation.
+See [data instructions](data/README.md) for the training-program source and expected filenames.
 
-## Main observations
+## Method
 
-- Consumption, forecast consumption, and margin variables are right-skewed and contain long tails.
-- Shorter-tenure customers show higher churn tendency.
-- Churn varies across sales channels and customer origins, indicating potential onboarding or acquisition effects.
-- Customer-level price dynamics are more informative than the overall market price trend through price variance, December-to-January differences, and price-change counts.
-- The analysis supports price sensitivity as a useful predictive hypothesis; it does not establish that price changes cause churn.
+1. Explore class balance, consumption, contract attributes and price history.
+2. Aggregate customer price variation and changes; encode categories and derive date features.
+3. Compare a Random Forest baseline, recall-tuned RF, balanced RF and XGBoost.
+4. Select thresholds on validation data and compare fixed models on a shared test set.
+5. Examine predictive associations using tree importance, permutation importance and SHAP.
 
-## Feature engineering
+## Evaluation design
 
-- Aggregate annual and recent six-month price variance for six price types.
-- Calculate December-to-January off-peak energy and power price differences.
-- Count price changes during the observation period.
-- Group low-frequency channel and origin categories into `OTHER` before one-hot encoding.
-- Convert `has_gas` to a binary feature and contract dates to month-based features relative to `2016-01-01`.
-- Remove highly correlated numeric features using a correlation threshold above 0.9.
+All models share a stratified 80/10/10 split with seed 42: 11,684 training, 1,461 validation and
+1,461 test customers. RF means Random Forest. ROC-AUC uses continuous probabilities; precision,
+recall and F2 use the selected threshold. F2 places more weight on recall. AP is not included in the
+final results table.
 
-## Model comparison
+RF grid search optimises training-fold recall. XGBoost retains average-precision cross-validation
+and validation aucpr early stopping. Thresholds are chosen on validation data; the test set is used
+for reporting and post-hoc explanations. Upstream preprocessing still uses full-data category and
+correlation rules, so this is not a fully isolated preprocessing evaluation.
 
-| Model | Accuracy | Precision | Recall | Role |
-|---|---:|---:|---:|---|
-| Random Forest baseline | 0.908 | 0.852 | 0.065 | Reference only; misses most churners |
-| Balanced Random Forest + threshold tuning | 0.771 | 0.247 | 0.662 | Preferred campaign model |
-| XGBoost + F2 threshold tuning | 0.565 | 0.146 | 0.715 | Higher-recall challenger |
+F2 combines precision (P) and recall (R), with recall given greater weight:
 
-## Explainability and research conclusion
+$
+F_2 = \frac{(1 + 2^2)PR}{2^2P + R} = \frac{5PR}{4P + R}
+$
 
-The modeling notebook compares built-in tree importance, test-set permutation importance, and positive-class SHAP values for both models.
+Here, precision is the proportion of flagged customers who actually churn; recall is the
+proportion of all churners detected. F2 uses a recall weight of four relative to precision
+in the weighted harmonic mean. It suits this project because finding more potential churners
+is a priority, while excessive false positives still reduce the score.
 
-### Shared signal
+## Results
 
-`margin_gross_pow_ele` ranks first by permutation importance for both Random Forest (approximately 0.152) and XGBoost (approximately 0.165). The two methods therefore agree that power-subscription margin and related price economics deserve the main commercial focus.
+Values come from the [saved evaluation CSV](artifacts/model_evaluation.csv), consistent with the
+saved modelling output.
 
-### Different model structures
+Bold values mark the highest score in each metric column. Threshold is a decision setting,
+not a performance metric, so no threshold is marked as best.
 
-- XGBoost shows an approximately exponential decline after ranking: many features contribute to a composite churn signal spanning margin, consumption, contract timing, subscribed power, and price dynamics.
-- Random Forest is more concentrated: `margin_gross_pow_ele` is far ahead of the next feature, `cons_12m`, while roughly half of the features have limited or negative permutation contribution.
-- The Random Forest hierarchy is easier to communicate and supports a narrower intervention design. XGBoost remains useful when higher recall and broader feature interactions are valuable.
+| Model | Threshold | ROC-AUC | Accuracy | Precision | Recall | F2 |
+|---|---:|---:|---:|---:|---:|---:|
+| Random Forest baseline | 0.5000 | 0.6983 | **0.9110** | **0.8750** | 0.0986 | 0.1199 |
+| Random Forest grid search | 0.5000 | 0.6888 | 0.8898 | 0.3827 | 0.2183 | 0.2388 |
+| Balanced RF recall target | 0.1900 | 0.6884 | 0.6051 | 0.1498 | **0.6549** | 0.3911 |
+| Balanced RF F2 | 0.2200 | 0.6884 | 0.6879 | 0.1770 | 0.6056 | 0.4080 |
+| XGBoost F2 | 0.1592 | **0.7005** | 0.6934 | 0.1812 | 0.6127 | **0.4151** |
 
-The SHAP ranking supports the same conclusion. Random Forest is led by `margin_gross_pow_ele`, `cons_12m`, `month_activ`, `forecast_meter_rent_12m`, and `net_margin`. XGBoost is led by `margin_gross_pow_ele`, `pow_max`, `net_margin`, `month_to_end`, and `var_year_price_off_peak_var`. SHAP magnitudes should be compared within each model because the models use different output scales.
+All five variants are evaluated on the same 1,461 customers, including 142 actual churners.
+A flagged customer is someone whose predicted churn probability meets the chosen threshold.
 
-## Actionable recommendations
+- **Random Forest baseline:** Establish a reference using 300 trees, no class weighting and
+  the default 0.5 threshold. It flags 16 customers, of whom 14 actually churn. This produces
+  the highest precision (87.5%) and accuracy (91.1%), but recall is only 9.9%: it misses
+  128 of 142 churners. Its conservative predictions make it unsuitable for broad churn detection.
 
-1. Run an A/B test for customers with high predicted churn and high `margin_gross_pow_ele`, comparing targeted price protection or tariff review with standard communication.
-2. Match offers to consumption and subscribed power; use `cons_12m` and `pow_max` to distinguish customer needs.
-3. Contact customers proactively around `month_to_end`, `month_activ`, and `month_renew`, especially for newer or renewal-stage customers.
-4. Use SHAP and permutation importance to define a reduced-feature challenger. Select features with training and validation data only, retrain the model, and evaluate it once on the untouched test set. Keep the reduced model if it preserves predictive performance while improving interpretability, campaign cost, or operational efficiency.
-5. Judge campaign success by churn reduction, retained margin, offer cost, and incremental profit, not recall alone.
+- **Random Forest grid search:** Improve recall through five-fold training-set cross-validation
+  over tree count, features per split and class weights, retaining the 0.5 threshold.
+  It detects 31 churners among 81 flagged customers: recall rises to 21.8%, with precision
+  of 38.3% and F2 of 0.2388. It improves coverage over the baseline but still misses most churners.
 
-## Reproducibility
+- **Balanced RF with a recall target:** Use class weighting and select the highest validation
+  threshold meeting 65% recall. At threshold 0.19, it detects 93 churners among 621 flagged
+  customers. It achieves the highest test recall (65.5%), but precision falls to 15.0%,
+  with 528 false positives. This variant prioritises coverage and requires the largest
+  contact list; its F2 is 0.3911.
 
-Run the notebooks from `notebooks/` in this order:
+- **Balanced RF with F2 tuning:** Use the same balanced model, but choose the threshold
+  that maximises validation F2. At threshold 0.22, it detects 86 churners among 486 flagged
+  customers. Compared with the recall-target variant, it reduces the contact list by 135
+  while detecting seven fewer churners. Precision improves to 17.7% and F2 to 0.4080,
+  with recall of 60.6%.
 
-1. `eda.ipynb` creates `clean_data_after_eda.csv`.
-2. `feature_engineering.ipynb` creates `my_data_for_prediction.csv`.
-3. `modeling.ipynb` trains, evaluates, explains, and persists the models.
+- **XGBoost with F2 tuning:** Fit boosted trees with cross-validation and early stopping,
+  then maximise validation F2 to choose the classification threshold. At threshold 0.1592,
+  it detects 87 churners among 480 flagged customers, giving precision of 18.1%, recall
+  of 61.3% and F2 of 0.4151. It also achieves the highest ROC-AUC (0.7005).
 
-Install dependencies with:
+**XGBoost is the best overall model in this comparison and the preferred model for this project.**
+It combines the strongest overall ranking (ROC-AUC) with the highest recall-focused balance
+of precision and recall (F2). Compared with balanced RF at its F2 threshold, it detects one
+additional churner with six fewer flagged customers and seven fewer false positives.
+The recall-target RF finds more churners, but XGBoost offers the better F2 trade-off.
+The performance gap is small; repeated validation is the next step to check its consistency.
+
+Both balanced RF variants have identical ROC-AUC because they use the same probabilities.
+Changing their classification threshold changes precision and recall, not the probability ranking.
+
+## Model interpretation
+
+Subscription power margin, `margin_gross_pow_ele`, ranks first in permutation importance for both
+models. Consumption, contract timing and subscribed power also contribute.
+
+![XGBoost SHAP summary of churn predictions](docs/images/xgboost-shap.png)
+
+*Extracted from the saved modelling notebook. Points show customer-level SHAP contributions; colour
+represents feature value. Positive values increase the explained output relative to its baseline.
+XGBoost SHAP values may be on the raw-margin scale, so their magnitude is not a percentage-point
+change in churn probability.*
+
+Use these findings to design a controlled retention experiment. Compare incremental churn reduction,
+retained margin and offer cost, rather than treating a high-risk score as proof of responsiveness.
+
+## Setup and run
+
+Install dependencies in a working Python environment:
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-The trained models and metadata are saved under `artifacts/`:
+Place `client_data.csv` and `price_data.csv` under `data/`. Run the notebooks in order, with
+`notebooks/` as the working directory:
 
-- `random_forest_balanced.joblib`
-- `xgboost_best.joblib`
-- `model_metadata.json`
-- `feature_importance_comparison.csv`
-- `shap_importance_comparison.csv`
+1. [EDA](notebooks/eda.ipynb) exports `clean_data_after_eda.csv`.
+2. [Feature engineering](notebooks/feature_engineering.ipynb) exports `my_data_for_prediction.csv`.
+3. [Modelling](notebooks/modeling.ipynb) trains, evaluates, explains and saves results.
 
-Source data is not included. Place `client_data.csv` and `price_data.csv` under `data/` before running the notebooks.
+Models, thresholds, feature names, metrics and explanation tables are saved under `artifacts/`.
+Apply the saved threshold to positive-class probabilities during inference. A complete fitted
+preprocessing pipeline is not yet included.
 
-## Repository structure
+## Project structure
 
 ```text
-.
-|-- data/                 # source and generated data files
-|-- notebooks/            # EDA, feature engineering, and modeling
-|-- artifacts/            # persisted models, metadata, and explainability tables
-|-- requirements.txt
-`-- README.md
+notebooks/       EDA, feature engineering and modelling
+artifacts/       Saved estimators, metadata and result tables
+data/            Source and generated CSVs (excluded from Git)
+docs/images/     Figures referenced by this README
+requirements.txt Python dependencies
 ```
 
 ## Limitations and next steps
 
-- The analysis is observational and does not prove that price changes cause churn.
-- Evaluation uses one stratified split; repeated cross-validation and time-based validation would strengthen the generalization estimate.
-- The repository persists trained models but does not yet provide a production inference service.
-- The reduced-feature challenger and controlled retention experiment are the next steps for testing whether model explanations improve campaign efficiency.
+- One random split and 142 test positives provide limited evidence about small performance
+  differences. Add repeated validation and, where dated labels permit, a temporal holdout.
+- Fit category grouping and correlation filtering on training data only. The current correlation
+  loop includes numeric target data and only checks positive correlation.
+- Date features discard direction through absolute differences. Price-difference names imply January
+  and December, while the code uses first and last observed records. Refine these definitions before
+  operational use.
+- XGBoost reuses validation data for early stopping and threshold selection. Check robustness with
+  fold-specific early stopping or out-of-fold threshold selection.
+- Test-set explanations are descriptive. Feature selection based on them needs a fresh evaluation
+  set.
+- Evaluate equal contact budgets and controlled intervention outcomes before selecting a campaign
+  policy.
 
-## Technologies
+## Skills
 
-Python, Jupyter, pandas, NumPy, seaborn, Matplotlib, scikit-learn, XGBoost, SHAP, and joblib.
+Python, pandas, exploratory analysis, customer-level feature engineering, stratified validation,
+Random Forest, XGBoost, threshold selection, ROC-AUC evaluation, SHAP interpretation and business
+communication.
